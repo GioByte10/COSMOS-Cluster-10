@@ -6,8 +6,11 @@ import time
 GPIO.setmode(GPIO.BCM)
 
 kit = ServoKit(channels=16)
-channel_servo1 = 6
-kit.servo[channel_servo1].set_pulse_width_range(400, 2300)
+channel_servo1 = 0
+channel_servo2 = 1
+
+kit.servo[channel_servo1].set_pulse_width_range(400, 2000)
+kit.servo[channel_servo2].set_pulse_width_range(400, 2000)
 
 GPIO_Ain1 = 17
 GPIO_Ain2 = 27
@@ -53,6 +56,9 @@ right = 5
 select = 8
 start = 9
 
+theta1 = 100
+theta2 = 20
+
 joystick = [128, 128]
 buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -67,6 +73,8 @@ def stop_execution():
 
 
 def handle_input():
+    global enabled, theta1, theta2
+
     if newbutton:
         buttons[codebutton - 304] = valuebutton
         print(buttons)
@@ -74,6 +82,47 @@ def handle_input():
     elif newstick:
         joystick[codestick] = valuestick
         print(joystick)
+
+    if buttons[select]:
+        enabled = not enabled
+        print("enabled" if enabled else "disabled")
+        time.sleep(0.2)
+
+    if buttons[yellow]:
+        theta1 += 5
+
+        if theta1 > 180:
+            theta1 = 180
+
+        print(theta1)
+        time.sleep(0.2)
+
+    if buttons[red]:
+        theta1 -= 5
+
+        if theta1 < 0:
+            theta1 = 0
+
+        print(theta1)
+        time.sleep(0.2)
+
+    if buttons[green]:
+        theta2 -= 5
+
+        if theta2 < 0:
+            theta2 = 0
+
+        print(theta2)
+        time.sleep(0.2)
+
+    if buttons[blue]:
+        theta2 += 5
+
+        if theta2 > 180:
+            theta2 = 180
+
+        print(theta2)
+        time.sleep(0.2)
 
 
 def drive_motors(left, right):
@@ -121,10 +170,17 @@ def drive():
 
 
 def attack():
-    kit.servo[channel_servo1].angle = 180 if buttons[red] else 0
+    kit.servo[channel_servo1].angle = 0 if buttons[right] else theta1
+    kit.servo[channel_servo2].angle = 180 if buttons[right] else theta2
 
 
-# Main code
+def idle():
+    pwmA.ChangeDutyCycle(0)
+    pwmB.ChangeDutyCycle(0)
+    kit.servo[channel_servo1].angle = 0
+    kit.servo[channel_servo2].angle = 180
+
+
 try:
 
     noError = True
@@ -150,22 +206,14 @@ try:
 
         handle_input()
 
-        if buttons[left]:
-            enabled = not enabled
-            print("enabled" if enabled else "disabled")
-            time.sleep(0.2)
-
-        if buttons[select]:
-            stop_execution()
-
         if enabled:
             drive()
             attack()
 
         else:
-            pwmA.ChangeDutyCycle(0)
-            pwmB.ChangeDutyCycle(0)
+            idle()
 
 except KeyboardInterrupt:
     stop_execution()
+
 
